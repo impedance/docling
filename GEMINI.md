@@ -1,77 +1,64 @@
 # Project Overview
 
-This project is a command-line tool named "docling" for converting DOCX and PDF documents into a structured set of Markdown files. It is designed to handle complex documents by splitting them into chapters, processing images, and applying consistent formatting.
+This project, "docling", is a command-line tool designed to convert DOCX or PDF documents into a structured set of Markdown files, complete with chapters and extracted assets. The core principle of the new architecture is to use a universal parser (`docling`) to create a structured Abstract Syntax Tree (AST), referred to as `InternalDoc`. This intermediate representation decouples the parsing logic from the output generation, making the pipeline more robust, testable, and extensible.
 
-The tool offers two main conversion pipelines:
-
-1.  **Deterministic Conversion:** A fast, rule-based approach that converts HTML to Markdown using predefined rules. This is suitable for well-structured documents where predictability is important.
-2.  **LLM-based Formatting:** An advanced approach that uses a Large Language Model (LLM) to format the content, which can handle more nuanced and complex formatting requirements.
+The project follows a Test-Driven Development (TDD) approach.
 
 ## Core Technologies
 
 *   **Python:** The primary programming language.
+*   **Pydantic:** Used for defining the strongly-typed `InternalDoc` AST models.
 *   **Typer:** Used for creating the command-line interface.
-*   **Mammoth:** Used for converting DOCX files to HTML.
-*   **Pandoc:** Used for extracting images from DOCX files.
-*   **Docling:** An optional engine for PDF and DOCX conversion.
-*   **Beautiful Soup (`bs4`):** For parsing and manipulating HTML.
-*   **LLM Integration:** The tool can connect to LLM providers like OpenRouter or Mistral for advanced content formatting.
+*   **Pytest:** The testing framework.
 
-## Architecture
+## Target Architecture (`architecture.md`)
 
-The conversion process follows these main steps:
+The conversion process is designed as a multi-stage pipeline that operates on the `InternalDoc` AST.
 
-1.  **Preprocessing:** The input DOCX or PDF is converted into HTML. Images are extracted and saved separately. The Table of Contents is removed from the HTML.
-2.  **Splitting:** The HTML is split into chapters based on `<h1>` tags.
-3.  **Formatting:** Each chapter is processed. This can be done either through the deterministic `html2md_rules.py` converter or by sending the content to an LLM with a specific prompt for formatting.
-4.  **Post-processing:** After formatting, additional processing is applied to clean up the Markdown and ensure consistency.
-5.  **Validation:** Validators are run to check for common formatting errors.
-6.  **Navigation:** A table of contents and navigation links are generated for the final set of Markdown files.
+1.  **Adapter (`docling_adapter`):** The input file (DOCX/PDF) is parsed by an external engine (like `docling`). The output is then mapped into our internal `InternalDoc` models and a list of binary `ResourceRef` objects (e.g., images). This is the only layer that interacts with the parser, isolating the rest of the system from it.
+2.  **Transforms:** A series of transformations can be applied to the `InternalDoc` AST to normalize content, fix structural issues (e.g., heading levels), or add numbering.
+3.  **Splitting (`chapter_splitter`):** The single `InternalDoc` is split into multiple `InternalDoc` objects, each representing a chapter, based on configurable rules (e.g., split on H1 headings).
+4.  **Asset Exporting (`assets_exporter`):** Binary resources are saved to an output directory. This process handles deduplication by checking content hashes (SHA256). It returns a map of resource IDs to their new relative paths.
+5.  **Rendering (`markdown_renderer`):** Each chapter's `InternalDoc` is traversed, and a Markdown string is generated. The asset map from the previous step is used to insert correct image paths.
+6.  **Output Generation:** The final Markdown files are written to disk, along with an `index.md` table of contents and a machine-readable `manifest.json`.
 
-# Building and Running
+## Project Structure
 
-## Prerequisites
+The new architecture is being built inside the `core/` directory, with a clear separation of concerns:
 
-*   Python 3.x
-*   Pandoc
+*   `core/model/`: Defines the `InternalDoc`, `ResourceRef`, and `Metadata` Pydantic models.
+*   `core/adapters/`: Handles parsing source files and mapping them to the `InternalDoc` AST.
+*   `core/render/`: Contains logic for rendering the AST to Markdown and exporting assets.
+*   `core/split/`: Logic for splitting the document into chapters.
+*   `core/transforms/`: Modules for modifying the AST.
+*   `core/output/`: Handles file writing and TOC generation.
+*   `tests/`: Contains all unit and integration tests.
 
-## Installation
+## Building and Running
 
-It is recommended to install the dependencies in a virtual environment:
+The project uses a virtual environment and manages dependencies via `requirements.txt`.
+
+### Installation
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-# It is not clear which dependency manager is used, so a requirements.txt may need to be generated.
-# pip install -r requirements.txt 
+pip install -r requirements.txt
 ```
 
-## Running the tool
+### Testing
 
-The main entry point is `cli.py`. You can run the tool using `typer`:
+Tests are run using `pytest`:
 
 ```bash
-python -m cli run [DOCX_PATH] [OPTIONS]
+pytest
 ```
 
-### Example
+### Running the (future) tool
+
+A new CLI (`doc2chapmd.py`) will be created to orchestrate the pipeline. The old `cli.py` is considered deprecated and will be removed.
 
 ```bash
-python -m cli run my_document.docx -o ./output --engine mammoth
+# Example of the target command
+python -m doc2chapmd input.docx -o out/
 ```
-
-### Key Options
-
-*   `--out` or `-o`: Specify the output directory for the Markdown files.
-*   `--engine`: Choose the preprocessing engine (`mammoth` or `docling`). Defaults to `mammoth` for DOCX and `docling` for PDF.
-*   `--model`: Specify the LLM model to use for formatting.
-*   `--provider`: Specify the LLM provider (`openrouter` or `mistral`).
-*   `--dry-run`: Run the pipeline without calling the LLM, saving intermediate HTML files instead.
-
-# Development Conventions
-
-*   **CLI:** The command-line interface is built using `typer`.
-*   **Modular Structure:** The codebase is organized into modules with specific responsibilities (e.g., `preprocess`, `splitter`, `validators`).
-*   **LLM Integration:** The `llm_client.py` module provides a factory for creating clients for different LLM providers.
-*   **Configuration:** Configuration for LLM models and providers is managed in the `config.py` file.
-*   **Formatting Rules:** The `formatting_rules.md` file defines the rules for the LLM-based formatting.
