@@ -96,6 +96,13 @@ def html_to_markdown(html: str, chapter_number: int, title: str, slug: str) -> s
                 blocks.append(f"> {line}")
             blocks.append("")
             continue
+        if node.name == "img":
+            src = node.get("src", "").strip()
+            alt = node.get("alt", "").strip()
+            if src:
+                blocks.append(f"![{alt}]({src})")
+                blocks.append("")
+            continue
         if node.name == "table":
             # very basic table conversion
             rows = node.find_all("tr")
