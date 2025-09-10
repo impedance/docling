@@ -75,13 +75,21 @@ class DocumentPipeline:
                 # Generate chapter title (use first heading text or fallback)
                 chapter_title = f"Chapter {i}"
                 if chapter.blocks:
+                    # First try to find a heading
                     for block in chapter.blocks:
-                        if hasattr(block, 'text') and block.text.strip():
+                        if block.type == "heading" and hasattr(block, 'text') and block.text.strip():
                             chapter_title = block.text.strip()
                             break
-                        elif hasattr(block, 'inlines') and block.inlines:
-                            chapter_title = block.inlines[0].content.strip()
-                            break
+                    else:
+                        # If no heading found, use first paragraph's text
+                        for block in chapter.blocks:
+                            if block.type == "paragraph" and hasattr(block, 'inlines') and block.inlines:
+                                for inline in block.inlines:
+                                    if hasattr(inline, 'content') and inline.content.strip():
+                                        chapter_title = inline.content.strip()[:50]  # Limit length
+                                        break
+                                if chapter_title != f"Chapter {i}":  # Found something
+                                    break
                 
                 # Generate filename
                 filename = generate_chapter_filename(i, chapter_title, self.config.chapter_pattern)
