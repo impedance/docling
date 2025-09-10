@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-This project converts DOCX or PDF documents into chaptered Markdown files with accompanying assets as described in `architecture.md`.
+This project converts DOCX or documents into chaptered Markdown files with accompanying assets as described in `architecture.md`.
 
 ## Development Principles
 - Follow SOLID, KISS, DRY, and general clean code practices.
