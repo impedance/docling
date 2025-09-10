@@ -74,6 +74,47 @@ This file provides comprehensive guidance to Claude Code when working with Pytho
   - Constants: `UPPER_SNAKE_CASE`
   - Private attributes/methods: `_leading_underscore`
 
+### 📂 Current Project Structure
+```
+/home/spec/work/rosa/docling/
+├── core/
+│   ├── adapters/
+│   │   ├── docling_adapter.py        # ✅ Document parsing with docling library
+│   │   └── docx_parser.py            # ✅ Specialized DOCX parser with numbering
+│   ├── model/
+│   │   ├── config.py                 # ✅ Configuration models
+│   │   ├── internal_doc.py           # ✅ Complete AST models
+│   │   ├── metadata.py               # ✅ Document metadata
+│   │   └── resource_ref.py           # ✅ Binary resource handling
+│   ├── transforms/
+│   │   ├── normalize.py              # ✅ Content normalization
+│   │   └── structure_fixes.py        # ✅ Structure fixes
+│   ├── split/
+│   │   └── chapter_splitter.py       # ✅ Chapter splitting logic
+│   ├── render/
+│   │   ├── markdown_renderer.py      # ✅ AST to Markdown rendering
+│   │   └── assets_exporter.py        # ✅ Asset extraction and saving
+│   ├── output/
+│   │   ├── file_naming.py            # ✅ Deterministic file naming
+│   │   ├── toc_builder.py            # ✅ TOC and manifest generation
+│   │   └── writer.py                 # ✅ File writing operations
+│   ├── numbering/
+│   │   ├── auto_numberer.py          # ✅ Automatic heading numbering
+│   │   └── __init__.py               # ✅ Package init
+│   └── pipeline.py                   # ✅ Pipeline orchestrator
+├── tests/
+│   ├── test_adapter.py               # ✅ Adapter tests
+│   ├── test_integration.py           # ✅ End-to-end tests
+│   ├── test_model.py                 # ✅ Model tests
+│   ├── test_render.py                # ✅ Rendering tests
+│   ├── test_splitter.py              # ✅ Chapter splitting tests
+│   └── test_toc_builder.py           # ✅ TOC builder tests
+├── samples/                          # ✅ Expected output examples
+├── doc2chapmd.py                     # ✅ CLI entry point
+├── config.yaml                       # ✅ Default configuration
+└── requirements.txt                  # ✅ Dependencies defined
+```
+
 ### 📚 Documentation & Explainability
 - **Update `README.md`** when new features are added, dependencies change, or setup steps are modified.
 - **Comment non-obvious code**. When writing complex logic, **add an inline `# Reason:` comment** explaining the *why*, not just the *what*.
