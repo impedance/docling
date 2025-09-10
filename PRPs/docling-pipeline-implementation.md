@@ -148,15 +148,13 @@ class PipelineConfig(BaseModel):
 ### List of Tasks to Complete the PRP (In Order)
 
 ```yaml
-Task 1: Add docling to requirements and integrate real parsing
-MODIFY requirements.txt:
-  - ADD: docling
-  
-MODIFY core/adapters/docling_adapter.py:
-  - REPLACE: run_docling_parser() mock function
-  - INTEGRATE: Real docling DocumentConverter
-  - PRESERVE: Existing mapping functions and return types
-  - PATTERN: Follow existing ResourceRef and InternalDoc creation
+Task 1: Integrate docx_xml_split for better DOCX chapter extraction
+INTEGRATE docx_xml_split.py:
+  - MOVE: docx_xml_split.py to core/adapters/docx_parser.py
+  - MODIFY: core/adapters/docling_adapter.py to use DOCX parser for .docx files
+  - PRESERVE: Existing docling integration for PDF files
+  - PATTERN: Detect file type and route to appropriate parser
+  - BENEFIT: Proper chapter extraction with numbering preservation
 
 Task 2: Create pipeline orchestrator
 CREATE core/pipeline.py:
@@ -204,20 +202,26 @@ MODIFY tests/test_adapter.py:
 ### Per Task Pseudocode
 
 ```python
-# Task 1: Real Docling Integration
-from docling.document_converter import DocumentConverter
+# Task 1: DOCX-specific Parser Integration
+def detect_file_type(file_path: str) -> str:
+    # PATTERN: Route to appropriate parser based on file extension
+    if file_path.lower().endswith('.docx'):
+        return 'docx'
+    elif file_path.lower().endswith('.pdf'):
+        return 'pdf'
+    else:
+        return 'unknown'
 
-def parse_with_docling(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
-    # CRITICAL: Use DocumentConverter for real parsing
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
+def parse_with_adapter(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
+    # CRITICAL: Use specialized parsers for better results
+    file_type = detect_file_type(file_path)
     
-    # PATTERN: Map docling document structure to our AST
-    # Use result.document for structured access
-    # Extract images/tables/text elements
-    # Create ResourceRef objects for binary content
-    
-    return internal_doc, resources
+    if file_type == 'docx':
+        # Use docx_xml_split for proper chapter extraction
+        return parse_docx_with_xml_split(file_path)
+    else:
+        # Use docling for PDF and other formats
+        return parse_with_docling(file_path)
 
 # Task 2: Pipeline Orchestrator  
 class DocumentPipeline:

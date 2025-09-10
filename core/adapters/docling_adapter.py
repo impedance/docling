@@ -1,6 +1,7 @@
 from typing import List, Tuple
 import hashlib
 import base64
+from pathlib import Path
 from docling.document_converter import DocumentConverter
 from docling_core.types.doc import (
     TextItem,
@@ -17,6 +18,17 @@ from core.model.internal_doc import (
     Inline,
 )
 from core.model.resource_ref import ResourceRef
+from .docx_parser import parse_docx_to_internal_doc
+
+def _detect_file_type(file_path: str) -> str:
+    """Detect file type based on extension."""
+    file_path_lower = file_path.lower()
+    if file_path_lower.endswith('.docx'):
+        return 'docx'
+    elif file_path_lower.endswith('.pdf'):
+        return 'pdf'
+    else:
+        return 'unknown'
 
 def _map_inlines_from_text_item(text_item: TextItem) -> List[Inline]:
     """Maps a docling TextItem to a list of Inline AST nodes."""
@@ -43,9 +55,17 @@ def _extract_image_data(picture_item: PictureItem) -> bytes:
 
 def parse_with_docling(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
     """
-    Parses a document file using the real docling DocumentConverter
-    and returns the InternalDoc AST and a list of extracted resources.
+    Parses a document file using appropriate parser based on file type.
+    Routes DOCX files to specialized XML parser for better chapter extraction.
+    Uses docling for PDF and other formats.
     """
+    file_type = _detect_file_type(file_path)
+    
+    if file_type == 'docx':
+        # Use specialized DOCX parser for better chapter extraction
+        return parse_docx_to_internal_doc(file_path)
+    
+    # Use docling for PDF and other formats
     converter = DocumentConverter()
     result = converter.convert(file_path)
     document = result.document

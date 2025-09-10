@@ -1,0 +1,214 @@
+
+"""
+docx_parser.py
+Parse DOCX files using WordprocessingML (DOCX XML) to extract structured content.
+- Detects headings via w:outlineLvl (preferred) or paragraph style names.
+- Extracts all text content with proper heading levels.
+- Returns structured data compatible with InternalDoc AST format.
+
+This module replaces the generic docling parsing for DOCX files to ensure
+proper chapter extraction and heading numbering preservation.
+"""
+from __future__ import annotations
+import zipfile, re, argparse
+from pathlib import Path
+from typing import Dict, List, Tuple
+from xml.etree import ElementTree as ET
+
+# Internal model imports
+from core.model.internal_doc import (
+    InternalDoc,
+    Block,
+    Heading,
+    Paragraph,
+    Text as InlineText,
+    Inline,
+)
+from core.model.resource_ref import ResourceRef
+
+NS = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+
+DEFAULT_HEADING_PATTERNS = [
+    r"^Heading\s*(\d)$",           # English
+    r"^Заголовок\s*(\d)$",         # Russian exact
+    r".*Заголовок\s*(\d)$",        # Russian with prefixes like 'ROSA_Заголовок 1'
+    r"^Titre\s*(\d)$",             # French
+    r"^Überschrift\s*(\d)$",       # German
+    r"^Encabezado\s*(\d)$",        # Spanish
+    r".*\bheading\s*(\d)$",        # fallback lowercase '... heading 2'
+]
+
+def _read(z: zipfile.ZipFile, name: str) -> bytes | None:
+    return z.read(name) if name in z.namelist() else None
+
+def _styles_map(styles_xml: bytes | None) -> Dict[str, str]:
+    """Map styleId -> human-readable name from styles.xml."""
+    if not styles_xml: return {}
+    root = ET.fromstring(styles_xml)
+    out: Dict[str, str] = {}
+    for s in root.findall(".//w:style", NS):
+        sid = s.attrib.get(f"{{{NS['w']}}}styleId")
+        name_el = s.find("w:name", NS)
+        name = name_el.attrib.get(f"{{{NS['w']}}}val") if name_el is not None else sid
+        if sid: out[sid] = name
+    return out
+
+def _text_of(p: ET.Element) -> str:
+    texts: List[str] = []
+    for t in p.findall(".//w:t", NS):
+        texts.append(t.text or "")
+    return "".join(texts).strip()
+
+def _heading_level(p: ET.Element, styles_map: Dict[str,str], heading_patterns: List[str]) -> int | None:
+    """Return heading level (1..9) or None if not a heading."""
+    pPr = p.find("w:pPr", NS)
+    if pPr is None:
+        return None
+    # Prefer outlineLvl when present
+    outline = pPr.find("w:outlineLvl", NS)
+    if outline is not None:
+        val = outline.attrib.get(f"{{{NS['w']}}}val")
+        if val is not None:
+            try:
+                return int(val) + 1  # outlineLvl 0 => H1
+            except ValueError:
+                pass
+    # Fallback: paragraph style name
+    pStyle = pPr.find("w:pStyle", NS)
+    if pStyle is not None:
+        sid = pStyle.attrib.get(f"{{{NS['w']}}}val", "")
+        sname = styles_map.get(sid, sid) or sid
+        for pat in heading_patterns:
+            m = re.match(pat, sname, flags=re.IGNORECASE)
+            if m:
+                try:
+                    return int(m.group(1))
+                except ValueError:
+                    continue
+        # Also try styleId like Heading1
+        m = re.match(r"^Heading(\d)$", sid, flags=re.IGNORECASE)
+        if m:
+            return int(m.group(1))
+    return None
+
+def _slug(text: str, maxlen: int = 80) -> str:
+    s = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
+    s = re.sub(r"\s+", "-", s).strip("-_").lower()
+    return (s or "section")[:maxlen].rstrip("-_")
+
+def split_docx_by_h1(
+    docx_path: str | Path,
+    out_dir: str | Path,
+    heading_patterns: List[str] | None = None,
+) -> Tuple[List[dict], List[Path]]:
+    """
+    Split DOCX by H1 into Markdown files.
+    Returns: (sections, written_paths)
+      sections: list of {"title": str, "lines": List[str]}
+      written_paths: list of Paths written
+    """
+    docx_path = Path(docx_path)
+    out_root = Path(out_dir) / docx_path.stem
+    out_root.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(docx_path) as z:
+        doc_xml = _read(z, "word/document.xml")
+        styles_xml = _read(z, "word/styles.xml")
+    if not doc_xml:
+        raise RuntimeError("word/document.xml not found")
+
+    styles_map = _styles_map(styles_xml)
+    body = ET.fromstring(doc_xml).find(".//w:body", NS)
+    if body is None:
+        raise RuntimeError("No <w:body> found")
+
+    patterns = heading_patterns or DEFAULT_HEADING_PATTERNS
+
+    sections: List[dict] = []
+    current = {"title": "front-matter", "lines": []}  # content before first H1
+
+    for p in body.findall("w:p", NS):
+        lvl = _heading_level(p, styles_map, patterns)
+        t = _text_of(p)
+        if lvl == 1 and t:
+            # Start new chapter
+            if current["lines"]:
+                sections.append(current)
+            current = {"title": t, "lines": [f"# {t}\n"]}
+        else:
+            if t:
+                if lvl:
+                    current["lines"].append(f"{'#'*lvl} {t}\n")
+                else:
+                    current["lines"].append(t + "\n")
+
+    if current["lines"]:
+        sections.append(current)
+
+    written: List[Path] = []
+    for i, sec in enumerate(sections, 1):
+        name = f"{i:02d}-{_slug(sec['title'])}.md"
+        path = out_root / name
+        path.write_text("".join(sec["lines"]), encoding="utf-8")
+        written.append(path)
+
+    return sections, written
+
+def parse_docx_to_internal_doc(docx_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
+    """
+    Parse DOCX file and return InternalDoc AST format.
+    
+    Args:
+        docx_path: Path to the DOCX file
+        
+    Returns:
+        Tuple of (InternalDoc, List[ResourceRef])
+    """
+    docx_path = Path(docx_path)
+    
+    with zipfile.ZipFile(docx_path) as z:
+        doc_xml = _read(z, "word/document.xml")
+        styles_xml = _read(z, "word/styles.xml")
+    
+    if not doc_xml:
+        raise RuntimeError("word/document.xml not found")
+    
+    styles_map = _styles_map(styles_xml)
+    body = ET.fromstring(doc_xml).find(".//w:body", NS)
+    if body is None:
+        raise RuntimeError("No <w:body> found")
+    
+    patterns = DEFAULT_HEADING_PATTERNS
+    blocks: List[Block] = []
+    resources: List[ResourceRef] = []  # DOCX images would need separate extraction
+    
+    for p in body.findall("w:p", NS):
+        lvl = _heading_level(p, styles_map, patterns)
+        text = _text_of(p)
+        
+        if text:  # Only process non-empty paragraphs
+            if lvl:
+                # Create heading
+                blocks.append(Heading(level=lvl, text=text))
+            else:
+                # Create paragraph with inline text
+                inlines = [InlineText(content=text)]
+                blocks.append(Paragraph(inlines=inlines))
+    
+    internal_doc = InternalDoc(blocks=blocks)
+    return internal_doc, resources
+
+# Simple CLI
+def _cli():
+    ap = argparse.ArgumentParser(description="Split DOCX into Markdown chapters by H1")
+    ap.add_argument("docx", help="Path to .docx")
+    ap.add_argument("-o", "--out", default="out", help="Output directory (default: out)")
+    args = ap.parse_args()
+    sections, written = split_docx_by_h1(args.docx, args.out)
+    print(f"Chapters: {len(sections)}")
+    print("Written files:")
+    for p in written:
+        print(" -", p)
+
+if __name__ == "__main__":
+    _cli()
