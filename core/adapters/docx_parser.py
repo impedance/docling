@@ -53,11 +53,121 @@ def _styles_map(styles_xml: bytes | None) -> Dict[str, str]:
         if sid: out[sid] = name
     return out
 
+def _get_paragraph_number(p: ET.Element, numbering_xml: bytes = None) -> str:
+    """Extract paragraph numbering (e.g., '4.1.3') from Word's numbering system."""
+    pPr = p.find("w:pPr", NS)
+    if pPr is None:
+        return ""
+    
+    numPr = pPr.find("w:numPr", NS)
+    if numPr is None:
+        return ""
+    
+    # Extract numId and ilvl
+    numId_el = numPr.find("w:numId", NS)
+    ilvl_el = numPr.find("w:ilvl", NS)
+    
+    if numId_el is None or ilvl_el is None:
+        return ""
+    
+    numId = numId_el.attrib.get(f"{{{NS['w']}}}val", "")
+    ilvl = ilvl_el.attrib.get(f"{{{NS['w']}}}val", "0")
+    
+    # For now, we'll use a simplified approach since parsing numbering.xml
+    # is complex. We'll look for common numbering patterns in the text itself
+    return ""
+
+def _extract_numbering_from_runs(p: ET.Element) -> str:
+    """Extract any numbering text from paragraph runs."""
+    # Look for text that looks like numbering at the start of the paragraph
+    runs = p.findall(".//w:r", NS)
+    if not runs:
+        return ""
+    
+    # Get text from the first few runs to check for numbering
+    first_run_texts = []
+    for run in runs[:3]:  # Check first 3 runs only
+        texts = []
+        for t in run.findall("w:t", NS):
+            if t.text:
+                texts.append(t.text)
+        run_text = "".join(texts)
+        if run_text.strip():
+            first_run_texts.append(run_text)
+    
+    full_start = "".join(first_run_texts)
+    
+    # Pattern to match numbering at start: "4.1.3 " or "4.1 " or "4 "
+    numbering_patterns = [
+        r'^(\d+(?:\.\d+)*)\s+',  # "4.1.3 " 
+        r'^(\d+(?:\.\d+)*)\.\s+',  # "4.1.3. "
+    ]
+    
+    for pattern in numbering_patterns:
+        match = re.match(pattern, full_start)
+        if match:
+            return match.group(1)
+    
+    return ""
+
 def _text_of(p: ET.Element) -> str:
+    """Extract text from paragraph, including any manual numbering."""
     texts: List[str] = []
     for t in p.findall(".//w:t", NS):
         texts.append(t.text or "")
-    return "".join(texts).strip()
+    full_text = "".join(texts).strip()
+    
+    return full_text
+
+def _text_with_numbering(p: ET.Element) -> str:
+    """Extract text from paragraph, preserving any numbering."""
+    # First try to extract automatic numbering
+    auto_number = _get_paragraph_number(p)
+    if auto_number:
+        # Remove the numbering from the text if it's duplicated
+        text = _text_of(p)
+        number, title = _extract_heading_number_and_title(text)
+        if number:  # If text already has numbering, use the text as-is
+            return text
+        else:  # Add the automatic numbering to clean text
+            return f"{auto_number} {text}" if text else auto_number
+    
+    # Fallback: try to extract numbering from text runs
+    run_number = _extract_numbering_from_runs(p)
+    text = _text_of(p)
+    
+    if run_number:
+        # Check if the number is already in the text
+        if text.startswith(run_number):
+            return text
+        else:
+            return f"{run_number} {text}" if text else run_number
+    
+    return text
+
+def _extract_heading_number_and_title(text: str) -> tuple[str, str]:
+    """Extract chapter number and title from heading text.
+    
+    Args:
+        text: Full heading text (e.g., "4.1.3 Installation and Setup")
+        
+    Returns:
+        tuple of (number, title) where number might be empty if no numbering found
+    """
+    # Pattern to match various numbering formats
+    number_patterns = [
+        r'^(\d+(?:\.\d+)*)\s+(.+)$',  # "4.1.3 Title" or "2.1 Title" or "2 Title"
+        r'^(\d+(?:\.\d+)*)\.\s+(.+)$',  # "4.1.3. Title" 
+        r'^(\d+(?:\.\d+)*)\s*[-–—]\s*(.+)$',  # "4.1.3 - Title" or "4.1.3 – Title"
+    ]
+    
+    for pattern in number_patterns:
+        match = re.match(pattern, text.strip())
+        if match:
+            return match.group(1), match.group(2).strip()
+    
+    # No numbering found, return empty number and full text as title
+    return "", text
 
 def _heading_level(p: ET.Element, styles_map: Dict[str,str], heading_patterns: List[str]) -> int | None:
     """Return heading level (1..9) or None if not a heading."""
@@ -129,7 +239,13 @@ def split_docx_by_h1(
 
     for p in body.findall("w:p", NS):
         lvl = _heading_level(p, styles_map, patterns)
-        t = _text_of(p)
+        if lvl:
+            # For headings, use numbering-aware text extraction
+            t = _text_with_numbering(p)
+        else:
+            # For regular paragraphs, use simple text extraction
+            t = _text_of(p)
+            
         if lvl == 1 and t:
             # Start new chapter
             if current["lines"]:
@@ -184,7 +300,12 @@ def parse_docx_to_internal_doc(docx_path: str) -> Tuple[InternalDoc, List[Resour
     
     for p in body.findall("w:p", NS):
         lvl = _heading_level(p, styles_map, patterns)
-        text = _text_of(p)
+        if lvl:
+            # For headings, use numbering-aware text extraction
+            text = _text_with_numbering(p)
+        else:
+            # For regular paragraphs, use simple text extraction
+            text = _text_of(p)
         
         if text:  # Only process non-empty paragraphs
             if lvl:

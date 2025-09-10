@@ -1,0 +1,1 @@
+# Auto-numbering module for hierarchical heading numbering

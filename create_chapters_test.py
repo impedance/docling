@@ -6,6 +6,7 @@ Create chapter files using our integrated pipeline for cu-admin-install.docx
 import os
 from pathlib import Path
 from core.adapters.docling_adapter import parse_with_docling
+from core.numbering.auto_numberer import add_automatic_numbering
 
 def create_chapters_from_docx(docx_file: str, output_dir: str):
     """Create chapter markdown files from DOCX using our integrated parser."""
@@ -21,11 +22,15 @@ def create_chapters_from_docx(docx_file: str, output_dir: str):
     try:
         internal_doc, resources = parse_with_docling(docx_file)
         
+        # Add automatic hierarchical numbering to all headings
+        numbered_doc = add_automatic_numbering(internal_doc)
+        print(f"Added automatic numbering to headings")
+        
         # Group content by H1 chapters
         chapters = []
         current_chapter = {"title": "front-matter", "blocks": []}
         
-        for block in internal_doc.blocks:
+        for block in numbered_doc.blocks:
             if hasattr(block, 'level') and block.level == 1:
                 # Start new chapter
                 if current_chapter["blocks"]:
@@ -89,8 +94,8 @@ def create_chapters_from_docx(docx_file: str, output_dir: str):
         return [], []
 
 if __name__ == "__main__":
-    docx_file = "docs-docx-pdfs/cu-admin-install.docx"
-    output_dir = "test_output_integrated_cu_admin"
+    docx_file = "docs-docx-pdfs/dev-portal-admin.docx"
+    output_dir = "dev_portal_chapters_with_numbering"
     
     chapters, files = create_chapters_from_docx(docx_file, output_dir)
     
