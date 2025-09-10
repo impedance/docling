@@ -314,9 +314,9 @@ def parse_docx_to_internal_doc(docx_path: str) -> Tuple[InternalDoc, List[Resour
                 # For headings, try to get numbered text from extracted headings
                 try:
                     numbered_heading = next(heading_iter)
-                    # Use the numbered text with proper formatting
+                    # Use the numbered text with proper formatting and correct level
                     numbered_text = f"{numbered_heading.number} {numbered_heading.text}"
-                    blocks.append(Heading(level=lvl, text=numbered_text))
+                    blocks.append(Heading(level=numbered_heading.level + 1, text=numbered_text))
                 except StopIteration:
                     # Fallback if we run out of numbered headings
                     blocks.append(Heading(level=lvl, text=text))
