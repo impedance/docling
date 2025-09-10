@@ -273,6 +273,7 @@ def split_docx_by_h1(
 def parse_docx_to_internal_doc(docx_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
     """
     Parse DOCX file and return InternalDoc AST format.
+    Uses comprehensive XML-based heading numbering extraction.
     
     Args:
         docx_path: Path to the DOCX file
@@ -280,7 +281,12 @@ def parse_docx_to_internal_doc(docx_path: str) -> Tuple[InternalDoc, List[Resour
     Returns:
         Tuple of (InternalDoc, List[ResourceRef])
     """
+    from core.numbering.heading_numbering import extract_headings_with_numbers
+    
     docx_path = Path(docx_path)
+    
+    # Extract numbered headings using comprehensive XML parsing
+    numbered_headings = extract_headings_with_numbers(str(docx_path))
     
     with zipfile.ZipFile(docx_path) as z:
         doc_xml = _read(z, "word/document.xml")
@@ -297,20 +303,23 @@ def parse_docx_to_internal_doc(docx_path: str) -> Tuple[InternalDoc, List[Resour
     patterns = DEFAULT_HEADING_PATTERNS
     blocks: List[Block] = []
     resources: List[ResourceRef] = []  # DOCX images would need separate extraction
+    heading_iter = iter(numbered_headings)
     
     for p in body.findall("w:p", NS):
         lvl = _heading_level(p, styles_map, patterns)
-        if lvl:
-            # For headings, use numbering-aware text extraction
-            text = _text_with_numbering(p)
-        else:
-            # For regular paragraphs, use simple text extraction
-            text = _text_of(p)
+        text = _text_of(p)  # Get basic text first
         
         if text:  # Only process non-empty paragraphs
             if lvl:
-                # Create heading
-                blocks.append(Heading(level=lvl, text=text))
+                # For headings, try to get numbered text from extracted headings
+                try:
+                    numbered_heading = next(heading_iter)
+                    # Use the numbered text with proper formatting
+                    numbered_text = f"{numbered_heading.number} {numbered_heading.text}"
+                    blocks.append(Heading(level=lvl, text=numbered_text))
+                except StopIteration:
+                    # Fallback if we run out of numbered headings
+                    blocks.append(Heading(level=lvl, text=text))
             else:
                 # Create paragraph with inline text
                 inlines = [InlineText(content=text)]
