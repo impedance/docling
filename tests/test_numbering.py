@@ -208,6 +208,10 @@ class TestFileNaming:
     
     def test_generate_chapter_filename(self):
         """Test generating chapter filename with number extraction."""
+        # Test title page (index 0)
+        filename = generate_chapter_filename(0, "АО НТЦ ИТ РОСА")
+        assert filename == "00-ao-ntts-it-rosa.md"
+        
         # Test with numbered heading
         filename = generate_chapter_filename(99, "3 Technical Requirements")
         assert filename == "03-technical-requirements.md"

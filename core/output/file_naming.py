@@ -28,9 +28,10 @@ def generate_chapter_filename(index: int, title: str, pattern: str = "{index:02d
     """
     Generates a deterministic filename for a chapter.
     Extracts the chapter number from the heading text if available.
+    Index 0 is for title page/TOC, chapters start from index 1.
 
     Args:
-        index: The 1-based index of the chapter (fallback if no number in title).
+        index: The 0-based index (0 for title page, 1+ for chapters).
         title: The title of the chapter (may include numbering like "1.2 Title").
         pattern: The pattern for the filename.
 
@@ -40,11 +41,14 @@ def generate_chapter_filename(index: int, title: str, pattern: str = "{index:02d
     # Extract the first line of the title in case it's multiline
     first_line_title = title.split('\n')[0]
     
-    # Try to extract chapter index from the title
-    extracted_index = chapter_index_from_h1(first_line_title)
-    
-    # Use extracted index if it's different from default (1), otherwise use provided index
-    chapter_index = extracted_index if extracted_index > 1 else index
+    # For title page (index 0), always use 00
+    if index == 0:
+        chapter_index = 0
+    else:
+        # Try to extract chapter index from the title
+        extracted_index = chapter_index_from_h1(first_line_title)
+        # Use extracted index if it's different from the default (1), otherwise use provided index
+        chapter_index = extracted_index if extracted_index > 1 else index
     
     # Clean title for slug (remove the number part if present)
     clean_title = re.sub(r'^[\dIVXLCDM]+(?:[.\-]\d+)*\s+', '', first_line_title, flags=re.IGNORECASE)

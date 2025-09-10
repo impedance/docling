@@ -71,7 +71,7 @@ class DocumentPipeline:
             chapter_files = []
             chapter_info = []
             
-            for i, chapter in enumerate(chapters, 1):
+            for i, chapter in enumerate(chapters):
                 # Generate chapter title (use first heading text or fallback)
                 chapter_title = f"Chapter {i}"
                 if chapter.blocks:
@@ -91,7 +91,7 @@ class DocumentPipeline:
                                 if chapter_title != f"Chapter {i}":  # Found something
                                     break
                 
-                # Generate filename
+                # Generate filename - start numbering from 0 for title page/TOC
                 filename = generate_chapter_filename(i, chapter_title, self.config.chapter_pattern)
                 chapter_path = chapters_dir / filename
                 
