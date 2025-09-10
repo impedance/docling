@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "title": "Dev Portal Admin",
+    "authors": [],
+    "language": "en",
+    "toc": []
+  },
+  "chapters": [
+    {
+      "title": "АО \"НТЦ ИТ РОСА\"",
+      "path": "chapters/01-ao-ntts-it-rosa.md"
+    },
+    {
+      "title": "Общие сведения",
+      "path": "chapters/02-obshchie-svedeniia.md"
+    },
+    {
+      "title": "Архитектура комплекса",
+      "path": "chapters/03-arkhitektura-kompleksa.md"
+    },
+    {
+      "title": "Технические и программные требования",
+      "path": "chapters/04-tekhnicheskie-i-programmnye-trebovaniia.md"
+    },
+    {
+      "title": "Установка и запуск комплекса",
+      "path": "chapters/05-ustanovka-i-zapusk-kompleksa.md"
+    },
+    {
+      "title": "Тонкая настройка операционной системы",
+      "path": "chapters/06-tonkaia-nastroika-operatsionnoi-sistemy.md"
+    },
+    {
+      "title": "Мониторинг и диагностика",
+      "path": "chapters/07-monitoring-i-diagnostika.md"
+    },
+    {
+      "title": "Управление контентом через Winter CMS",
+      "path": "chapters/08-upravlenie-kontentom-cherez-winter-cms.md"
+    }
+  ],
+  "assets": {}
+}

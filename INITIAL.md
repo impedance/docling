@@ -1,6 +1,6 @@
 ## FEATURE:
 
-- A command-line tool to convert DOCX and PDF documents into a structured set of Markdown files.
+- A command-line tool to convert DOCX documents into a structured set of Markdown files.
 - The core of the tool is a pipeline architecture that uses a universal parser to create an intermediate Abstract Syntax Tree (AST) called `InternalDoc`.
 - This decouples the parsing logic from the output generation, making the process robust, testable, and extensible.
 - The pipeline processes the `InternalDoc` through several stages:

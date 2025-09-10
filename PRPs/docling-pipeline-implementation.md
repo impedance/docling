@@ -1,13 +1,13 @@
 name: "Docling Document Processing Pipeline Implementation"
 description: |
-  Complete implementation of a document conversion tool that transforms DOCX/PDF files 
+  Complete implementation of a document conversion tool that transforms DOCX files 
   into structured Markdown chapters with assets, using docling library and pipeline architecture.
 
 ---
 
 ## Goal
 Implement a complete, working document conversion pipeline that:
-- Takes DOCX/PDF input files and converts them to structured Markdown chapters
+- Takes DOCX input files and converts them to structured Markdown chapters
 - Uses docling library for universal document parsing 
 - Extracts and manages binary assets (images, etc.)
 - Generates table of contents and manifest files
@@ -30,7 +30,7 @@ A complete document processing pipeline with:
 - Comprehensive test coverage
 
 ### Success Criteria
-- [ ] CLI processes DOCX/PDF files and generates chapter markdown files
+- [ ] CLI processes DOCX files and generates chapter markdown files
 - [ ] Images and assets are extracted and properly referenced
 - [ ] Generated `index.md` provides complete table of contents
 - [ ] Generated `manifest.json` contains machine-readable document metadata
@@ -167,7 +167,7 @@ Task 1: Integrate docx_xml_split for better DOCX chapter extraction ✅ COMPLETE
 INTEGRATE docx_xml_split.py:
   - MOVE: docx_xml_split.py to core/adapters/docx_parser.py ✅
   - MODIFY: core/adapters/docling_adapter.py to use DOCX parser for .docx files ✅
-  - PRESERVE: Existing docling integration for PDF files ✅
+  - PRESERVE: Existing docling integration ✅
   - PATTERN: Detect file type and route to appropriate parser ✅
   - BENEFIT: Proper chapter extraction with numbering preservation ✅
 
@@ -202,7 +202,7 @@ CREATE core/model/config.py:
 Task 6: Create comprehensive integration tests ✅ COMPLETED
 CREATE tests/test_integration.py:
   - TEST: End-to-end document processing ✅
-  - USE: Real sample DOCX/PDF files ✅
+  - USE: Real sample DOCX files ✅
   - VERIFY: Output matches expected structure ✅
   - PATTERN: Follow existing test patterns in tests/ ✅
 
@@ -228,8 +228,6 @@ def detect_file_type(file_path: str) -> str:
     # PATTERN: Route to appropriate parser based on file extension
     if file_path.lower().endswith('.docx'):
         return 'docx'
-    elif file_path.lower().endswith('.pdf'):
-        return 'pdf'
     else:
         return 'unknown'
 
@@ -241,7 +239,7 @@ def parse_with_adapter(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
         # Use docx_xml_split for proper chapter extraction
         return parse_docx_with_xml_split(file_path)
     else:
-        # Use docling for PDF and other formats
+        # Use docling for other formats (currently unsupported)
         return parse_with_docling(file_path)
 
 # Task 2: Pipeline Orchestrator  
@@ -313,8 +311,8 @@ ruff check --fix .
 
 def test_real_docling_parsing():
     """Test actual docling integration works"""
-    # Use small test DOCX/PDF file
-    doc, resources = parse_with_docling("test_files/simple.pdf")
+    # Use small test DOCX file
+    doc, resources = parse_with_docling("test_files/simple.docx")
     assert len(doc.blocks) > 0
     assert all(isinstance(block, Block) for block in doc.blocks)
 
@@ -349,7 +347,7 @@ pytest tests/ -v
 source .venv/bin/activate
 
 # Test with a real document
-python doc2chapmd.py samples/test-document.pdf -o /tmp/test_output
+python doc2chapmd.py samples/test-document.docx -o /tmp/test_output
 
 # Expected output structure:
 # /tmp/test_output/test-document/

@@ -1,10 +1,10 @@
 # Docling Document Processing Pipeline
 
-A powerful document conversion tool that transforms DOCX/PDF files into structured Markdown chapters with extracted assets, using the [docling](https://github.com/docling-project/docling) library.
+A powerful document conversion tool that transforms DOCX files into structured Markdown chapters with extracted assets, using the [docling](https://github.com/docling-project/docling) library.
 
 ## Features
 
-- 📄 **Universal Document Support**: Process both DOCX and PDF files
+- 📄 **DOCX Document Support**: Process DOCX files
 - 📚 **Chapter-based Splitting**: Automatically split documents by heading levels
 - 🖼️ **Asset Extraction**: Extract and organize images and media files
 - 🗂️ **Structured Output**: Generate table of contents and machine-readable manifests
@@ -43,8 +43,8 @@ source .venv/bin/activate
 # Convert DOCX file
 python doc2chapmd.py convert your-document.docx
 
-# Convert PDF file with custom output directory
-python doc2chapmd.py convert document.pdf -o output/
+# Convert DOCX file with custom output directory
+python doc2chapmd.py convert document.docx -o output/
 
 # Verbose output to see processing details
 python doc2chapmd.py convert document.docx -o output/ --verbose
@@ -92,7 +92,7 @@ Convert documents with various options:
 python doc2chapmd.py convert input.docx
 
 # All available options
-python doc2chapmd.py convert input.pdf \
+python doc2chapmd.py convert input.docx \
   --output custom_output/ \
   --split-level 2 \
   --assets-dir images/ \
@@ -182,7 +182,7 @@ python doc2chapmd.py convert document.docx \
 python doc2chapmd.py convert russian-doc.docx --locale ru
 
 # Process with custom locale
-python doc2chapmd.py convert document.pdf --locale de
+python doc2chapmd.py convert document.docx --locale de
 ```
 
 ## Output Files

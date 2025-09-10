@@ -1,6 +1,6 @@
 # Project Overview
 
-This project, "docling", is a command-line tool designed to convert DOCX or PDF documents into a structured set of Markdown files, complete with chapters and extracted assets. The core principle of the new architecture is to use a universal parser (`docling`) to create a structured Abstract Syntax Tree (AST), referred to as `InternalDoc`. This intermediate representation decouples the parsing logic from the output generation, making the pipeline more robust, testable, and extensible.
+This project, "docling", is a command-line tool designed to convert DOCX documents into a structured set of Markdown files, complete with chapters and extracted assets. The core principle of the new architecture is to use a universal parser (`docling`) to create a structured Abstract Syntax Tree (AST), referred to as `InternalDoc`. This intermediate representation decouples the parsing logic from the output generation, making the pipeline more robust, testable, and extensible.
 
 The project follows a Test-Driven Development (TDD) approach.
 
@@ -15,7 +15,7 @@ The project follows a Test-Driven Development (TDD) approach.
 
 The conversion process is designed as a multi-stage pipeline that operates on the `InternalDoc` AST.
 
-1.  **Adapter (`docling_adapter`):** The input file (DOCX/PDF) is parsed by an external engine (like `docling`). The output is then mapped into our internal `InternalDoc` models and a list of binary `ResourceRef` objects (e.g., images). This is the only layer that interacts with the parser, isolating the rest of the system from it.
+1.  **Adapter (`docling_adapter`):** The input file (DOCX) is parsed by an external engine (like `docling`). The output is then mapped into our internal `InternalDoc` models and a list of binary `ResourceRef` objects (e.g., images). This is the only layer that interacts with the parser, isolating the rest of the system from it.
 2.  **Transforms:** A series of transformations can be applied to the `InternalDoc` AST to normalize content, fix structural issues (e.g., heading levels), or add numbering.
 3.  **Splitting (`chapter_splitter`):** The single `InternalDoc` is split into multiple `InternalDoc` objects, each representing a chapter, based on configurable rules (e.g., split on H1 headings).
 4.  **Asset Exporting (`assets_exporter`):** Binary resources are saved to an output directory. This process handles deduplication by checking content hashes (SHA256). It returns a map of resource IDs to their new relative paths.

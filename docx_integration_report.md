@@ -31,7 +31,7 @@
 
 ### Architecture
 - **DOCX files**: Routed to specialized XML parser (`core/adapters/docx_parser.py`)
-- **PDF files**: Continue using docling for image extraction
+- **Other formats**: No longer supported - converter only handles DOCX files
 - **Auto-detection**: File type detection based on extension
 - **Fallback**: Unknown formats default to docling
 

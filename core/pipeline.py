@@ -35,7 +35,7 @@ class DocumentPipeline:
         Runs the full document processing pipeline.
         
         Args:
-            input_path: Path to the input document (DOCX/PDF)
+            input_path: Path to the input document (DOCX)
             output_dir: Directory to write output files
             
         Returns:

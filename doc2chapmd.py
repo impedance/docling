@@ -2,7 +2,7 @@
 """
 Document to Chapter Markdown Converter
 
-CLI tool to convert DOCX/PDF documents into structured Markdown chapters using docling.
+CLI tool to convert DOCX documents into structured Markdown chapters using docling.
 """
 
 from pathlib import Path
@@ -18,14 +18,14 @@ from core.pipeline import DocumentPipeline
 
 app = typer.Typer(
     name="doc2chapmd",
-    help="Convert DOCX/PDF documents to structured Markdown chapters"
+    help="Convert DOCX documents to structured Markdown chapters"
 )
 console = Console()
 
 
 @app.command()
 def convert(
-    input_file: Path = typer.Argument(..., help="Path to input DOCX/PDF file"),
+    input_file: Path = typer.Argument(..., help="Path to input DOCX file"),
     output_dir: Path = typer.Option(
         Path("out"), 
         "--output", "-o",
@@ -61,7 +61,7 @@ def convert(
     """
     Convert a document file to structured Markdown chapters.
     
-    This tool uses docling to parse DOCX/PDF files and converts them into
+    This tool uses docling to parse DOCX files and converts them into
     a structured set of Markdown files with extracted assets.
     """
     
@@ -70,8 +70,8 @@ def convert(
         console.print(f"[red]Error: Input file '{input_file}' does not exist[/red]")
         raise typer.Exit(1)
     
-    if input_file.suffix.lower() not in ['.docx', '.pdf']:
-        console.print(f"[red]Error: Unsupported file format '{input_file.suffix}'. Supported: .docx, .pdf[/red]")
+    if input_file.suffix.lower() != '.docx':
+        console.print(f"[red]Error: Unsupported file format '{input_file.suffix}'. Supported: .docx[/red]")
         raise typer.Exit(1)
     
     try:
