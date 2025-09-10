@@ -13,6 +13,7 @@ from core.render.markdown_renderer import render_markdown
 from core.split.chapter_splitter import split_into_chapters, ChapterRules
 from core.transforms.normalize import run as normalize
 from core.transforms.structure_fixes import run as fix_structure
+from core.transforms.content_reorder import run as reorder_content
 
 
 class PipelineResult(NamedTuple):
@@ -59,6 +60,7 @@ class DocumentPipeline:
             # 2. Apply transforms
             doc = normalize(doc)
             doc = fix_structure(doc)
+            doc = reorder_content(doc)
 
             # 3. Split into chapters
             rules = ChapterRules(level=self.config.split_level)
