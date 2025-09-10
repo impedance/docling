@@ -70,6 +70,5 @@ def test_parse_with_docling_maps_correctly(mock_run_parser):
     assert resource.mime_type == "image/png"
     
     # Verify content and hash
-    expected_content = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x04\x00\x00\x00\xb1\x0c\x02\x00\x00\x00\x0bIEND\xaeB`\x82'
     assert resource.content is not None
     assert hashlib.sha256(resource.content).hexdigest() == "63ef318d96b5d0d0ceba6e04a4e622b1158335cdc67c49e27839132c6f655058"

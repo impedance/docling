@@ -4,9 +4,8 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.progress import Progress
-from slugify import slugify
 
-from . import navigation, postprocess, preprocess, splitter, validators
+from . import navigation, preprocess, splitter, validators
 from .config import DEFAULT_MODEL, DEFAULT_PROVIDER, OPENROUTER_DEFAULT_MODEL, MISTRAL_DEFAULT_MODEL
 from .llm_client import ClientFactory
 

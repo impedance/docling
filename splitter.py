@@ -9,7 +9,6 @@ from typing import List, Dict, Optional
 from xml.etree import ElementTree as ET
 
 from bs4 import BeautifulSoup
-from bs4.element import PageElement, Tag
 
 
 def split_html_by_h1(html_content: str) -> List[str]:

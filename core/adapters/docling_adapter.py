@@ -2,6 +2,8 @@ from typing import List, Tuple, Any, Dict
 import hashlib
 import base64
 
+from docling.document_converter import DocumentConverter
+
 from core.model.internal_doc import (
     InternalDoc,
     Block,
@@ -16,39 +18,90 @@ from core.model.internal_doc import (
 )
 from core.model.resource_ref import ResourceRef
 
-# --- Mocked Docling Interaction ---
-# In a real implementation, this function would call the actual docling process
-# and get its JSON output. For now, it's a placeholder.
 
 def run_docling_parser(file_path: str) -> Dict[str, Any]:
     """
-    A mock function that simulates running the docling parser on a file
-    and returns a structured JSON-like dictionary.
+    Parses a document file using the real docling DocumentConverter
+    and returns a structured dictionary compatible with our mapping functions.
     """
-    # This is a hardcoded response for testing purposes.
-    # It represents a simple document structure.
-    return {
-        "metadata": {
-            "title": "Example Document",
-        },
-        "resources": {
-            "img_1": {
-                "mime_type": "image/png",
-                "content_b64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-            }
-        },
-        "blocks": [
-            {"type": "heading", "level": 1, "text": "Document Title"},
-            {
+    # Initialize the docling converter
+    converter = DocumentConverter()
+    
+    # Convert the document
+    result = converter.convert(file_path)
+    document = result.document
+    
+    # Extract metadata
+    metadata = {
+        "title": getattr(document, 'title', '') or "Untitled Document",
+    }
+    
+    # Process pictures/images to create resources
+    resources = {}
+    for i, picture in enumerate(document.pictures):
+        # Create a unique resource ID
+        resource_id = f"img_{i + 1}"
+        
+        # For now, we'll handle image resources without actual binary data
+        # This is a limitation of the current docling API - images are referenced but not embedded
+        resources[resource_id] = {
+            "mime_type": "image/png",  # Default mime type
+            "content_b64": "",  # Empty for now - docling doesn't provide binary data directly
+            "alt": getattr(picture, 'text', '') or f"Image {i + 1}",
+        }
+    
+    # Process text elements to create blocks
+    blocks = []
+    
+    # Process text items (headings, paragraphs, etc.)
+    for text_item in document.texts:
+        # Get the text content
+        text_content = text_item.text if hasattr(text_item, 'text') else str(text_item)
+        
+        # Determine the block type based on docling's classification
+        item_type = getattr(text_item, 'label', 'paragraph').lower()
+        
+        if 'title' in item_type or 'heading' in item_type or 'section' in item_type:
+            # Extract heading level (default to 1 if not specified)
+            level = 1
+            if hasattr(text_item, 'level'):
+                level = text_item.level
+            elif 'h1' in item_type or '1' in item_type:
+                level = 1
+            elif 'h2' in item_type or '2' in item_type:
+                level = 2
+            elif 'h3' in item_type or '3' in item_type:
+                level = 3
+            
+            blocks.append({
+                "type": "heading",
+                "level": level,
+                "text": text_content
+            })
+        else:
+            # Treat as paragraph with simple text inline
+            blocks.append({
                 "type": "paragraph",
                 "inlines": [
-                    {"type": "text", "content": "This is a "},
-                    {"type": "bold", "content": "sample"},
-                    {"type": "text", "content": " paragraph."},
-                ],
-            },
-            {"type": "image", "alt": "A single black pixel", "resource_id": "img_1"},
-        ],
+                    {"type": "text", "content": text_content}
+                ]
+            })
+    
+    # Add image blocks for pictures
+    for i, picture in enumerate(document.pictures):
+        resource_id = f"img_{i + 1}"
+        alt_text = getattr(picture, 'text', '') or f"Image {i + 1}"
+        
+        blocks.append({
+            "type": "image",
+            "alt": alt_text,
+            "resource_id": resource_id
+        })
+    
+    return {
+        "metadata": metadata,
+        "resources": resources,
+        "blocks": blocks
     }
 
 # --- Mapper ---

@@ -1,4 +1,3 @@
-import re
 from slugify import slugify
 
 def generate_chapter_filename(index: int, title: str, pattern: str = "{index:02d}-{slug}.md") -> str:

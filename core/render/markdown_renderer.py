@@ -1,16 +1,9 @@
-from typing import List, Dict
+from typing import Dict
 
 from core.model.internal_doc import (
     InternalDoc,
     Block,
     Inline,
-    Heading,
-    Paragraph,
-    Image,
-    Text,
-    Bold,
-    Italic,
-    Link,
 )
 
 def _render_inline(inline: Inline) -> str:
