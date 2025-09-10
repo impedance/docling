@@ -34,8 +34,14 @@ def parse_with_docling(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
     blocks: List[Block] = []
     resources: List[ResourceRef] = []
     
-    for item in document.iterate_items():
-        print(item)
+    # Combine all document items (texts, pictures, etc.) into a single list
+    # and sort them by their position in the document to preserve the original order.
+    all_items = sorted(
+        document.texts + document.pictures,
+        key=lambda item: item.position
+    )
+
+    for item in all_items:
         if isinstance(item, SectionHeaderItem):
             blocks.append(Heading(level=item.level, text=item.text))
         elif isinstance(item, TextItem):
