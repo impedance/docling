@@ -1,8 +1,8 @@
 from typing import List, Tuple
 import hashlib
+import base64
 from docling.document_converter import DocumentConverter
 from docling_core.types.doc import (
-    SectionHeaderItem,
     TextItem,
     PictureItem,
 )
@@ -22,6 +22,25 @@ def _map_inlines_from_text_item(text_item: TextItem) -> List[Inline]:
     """Maps a docling TextItem to a list of Inline AST nodes."""
     return [InlineText(content=text_item.text)]
 
+def _extract_image_data(picture_item: PictureItem) -> bytes:
+    """Extract binary image data from PictureItem."""
+    image_ref = picture_item.image
+    if hasattr(image_ref, 'pil_image') and image_ref.pil_image:
+        # Convert PIL image to bytes
+        import io
+        img_buffer = io.BytesIO()
+        image_ref.pil_image.save(img_buffer, format='PNG')
+        return img_buffer.getvalue()
+    elif hasattr(image_ref, 'uri') and image_ref.uri:
+        # Extract from data URI (data:image/png;base64,...)
+        uri = image_ref.uri
+        if uri.startswith('data:') and ';base64,' in uri:
+            base64_data = uri.split(';base64,')[1]
+            return base64.b64decode(base64_data)
+    
+    # Fallback - return empty bytes if we can't extract image data
+    return b''
+
 def parse_with_docling(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
     """
     Parses a document file using the real docling DocumentConverter
@@ -34,32 +53,59 @@ def parse_with_docling(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
     blocks: List[Block] = []
     resources: List[ResourceRef] = []
     
-    # Combine all document items (texts, pictures, etc.) into a single list
-    # and sort them by their position in the document to preserve the original order.
-    all_items = sorted(
-        document.texts + document.pictures,
-        key=lambda item: item.position
-    )
-
-    for item in all_items:
-        if isinstance(item, SectionHeaderItem):
-            blocks.append(Heading(level=item.level, text=item.text))
-        elif isinstance(item, TextItem):
-            blocks.append(Paragraph(inlines=_map_inlines_from_text_item(item)))
+    # Use iterate_items to get items in document order
+    for item_tuple in document.iterate_items():
+        item, page_num = item_tuple
+        
+        if isinstance(item, TextItem):
+            # Check if this is a heading based on label
+            if hasattr(item, 'label') and str(item.label) in ['title', 'heading', 'section_header']:
+                # Treat as level 1 heading
+                blocks.append(Heading(level=1, text=item.text))
+            elif hasattr(item, 'formatting') and item.formatting:
+                # Check if text has bold formatting that might indicate a heading
+                # For now, just create paragraphs - headings will be fixed by structure transforms later
+                blocks.append(Paragraph(inlines=_map_inlines_from_text_item(item)))
+            else:
+                blocks.append(Paragraph(inlines=_map_inlines_from_text_item(item)))
+                
         elif isinstance(item, PictureItem):
-            resource_id = f"img_{len(resources) + 1}"
-            content = item.content
-            sha256 = hashlib.sha256(content).hexdigest()
+            # Extract image data
+            content = _extract_image_data(item)
             
-            resource = ResourceRef(
-                id=resource_id,
-                mime_type=item.mimetype,
-                content=content,
-                sha256=sha256,
-            )
-            resources.append(resource)
-            
-            blocks.append(Image(alt=item.text or f"Image {len(resources)}", resource_id=resource_id))
+            if content:  # Only create resource if we have actual image data
+                resource_id = f"img_{len(resources) + 1:03d}"
+                sha256 = hashlib.sha256(content).hexdigest()
+                
+                # Try to determine MIME type
+                mime_type = "image/png"  # Default
+                if hasattr(item.image, 'pil_image') and item.image.pil_image:
+                    pil_format = item.image.pil_image.format
+                    if pil_format:
+                        mime_type = f"image/{pil_format.lower()}"
+                
+                resource = ResourceRef(
+                    id=resource_id,
+                    mime_type=mime_type,
+                    content=content,
+                    sha256=sha256,
+                )
+                resources.append(resource)
+                
+                # Get alt text from caption or generate default
+                caption_text = getattr(item, 'caption_text', None)
+                if caption_text and hasattr(caption_text, '__call__'):
+                    # If caption_text is a method, call it
+                    try:
+                        alt_text = str(caption_text())
+                    except Exception:
+                        alt_text = f"Image {len(resources)}"
+                elif isinstance(caption_text, str):
+                    alt_text = caption_text
+                else:
+                    alt_text = f"Image {len(resources)}"
+                
+                blocks.append(Image(alt=alt_text, resource_id=resource_id))
 
     internal_doc = InternalDoc(blocks=blocks)
     return internal_doc, resources

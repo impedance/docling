@@ -1,0 +1,12 @@
+# Document Processing Pipeline Configuration
+
+# Chapter splitting configuration
+split_level: 1  # Heading level at which to split documents into chapters
+
+# Output configuration
+assets_dir: "assets"  # Directory name for extracted assets
+chapter_pattern: "{index:02d}-{slug}.md"  # Filename pattern for chapter files
+
+# Content configuration
+frontmatter_enabled: true  # Include YAML frontmatter in generated files
+locale: "en"  # Language/locale for processing

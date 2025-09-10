@@ -5,5 +5,5 @@ pytest
 lxml
 beautifulsoup4
 python-slugify
-docling
+rich
 docling
