@@ -1,7 +1,7 @@
 # Document Processing Pipeline Configuration
 
 # Chapter splitting configuration
-split_level: 1  # Heading level at which to split documents into chapters
+split_level: 2  # Heading level at which to split documents into chapters
 
 # Output configuration
 assets_dir: "assets"  # Directory name for extracted assets
