@@ -74,24 +74,17 @@ class DocumentPipeline:
             chapter_info = []
             
             for i, chapter in enumerate(chapters):
-                # Generate chapter title (use first heading text or fallback)
-                chapter_title = f"Chapter {i}"
-                if chapter.blocks:
-                    # First try to find a heading
-                    for block in chapter.blocks:
-                        if block.type == "heading" and hasattr(block, 'text') and block.text.strip():
-                            chapter_title = block.text.strip()
-                            break
-                    else:
-                        # If no heading found, use first paragraph's text
-                        for block in chapter.blocks:
-                            if block.type == "paragraph" and hasattr(block, 'inlines') and block.inlines:
-                                for inline in block.inlines:
-                                    if hasattr(inline, 'content') and inline.content.strip():
-                                        chapter_title = inline.content.strip()[:50]  # Limit length
-                                        break
-                                if chapter_title != f"Chapter {i}":  # Found something
-                                    break
+                # Generate chapter title
+                if i == 0:
+                    # For chapter 0, combine special sections into a meaningful title
+                    chapter_title = _get_zero_chapter_title(chapter)
+                else:
+                    # For main chapters, find first heading and renumber it
+                    chapter_title = _get_main_chapter_title(chapter, i)
+                
+                # Fallback
+                if not chapter_title:
+                    chapter_title = f"Chapter {i}"
                 
                 # Generate filename - start numbering from 0 for title page/TOC
                 filename = generate_chapter_filename(i, chapter_title, self.config.chapter_pattern)
@@ -151,3 +144,61 @@ class DocumentPipeline:
                 asset_files=[],
                 error_message=str(e)
             )
+
+
+def _get_zero_chapter_title(chapter) -> str:
+    """
+    Generate title for chapter 0 (title page, TOC, annotation, etc.).
+    
+    Args:
+        chapter: The chapter document
+        
+    Returns:
+        Appropriate title for zero chapter
+    """
+    # Look for specific section titles
+    found_sections = []
+    
+    for block in chapter.blocks:
+        if block.type == "heading" and hasattr(block, 'text') and block.text.strip():
+            heading_text = block.text.strip().lower()
+            
+            # Clean heading text
+            import re
+            clean_heading = re.sub(r'^\d+(\.\d+)*\.?\s*', '', heading_text).strip()
+            
+            if 'аннотация' in clean_heading:
+                found_sections.append('АННОТАЦИЯ')
+            elif 'содержание' in clean_heading:
+                found_sections.append('СОДЕРЖАНИЕ')
+    
+    # Return combined title or fallback
+    if found_sections:
+        return ' и '.join(found_sections)
+    
+    return 'АННОТАЦИЯ'  # Default for zero chapter
+
+
+def _get_main_chapter_title(chapter, chapter_num: int) -> str:
+    """
+    Generate title for main chapters (1, 2, 3, etc.) with proper renumbering.
+    
+    Args:
+        chapter: The chapter document
+        chapter_num: The new chapter number (1, 2, 3...)
+        
+    Returns:
+        Properly numbered chapter title
+    """
+    for block in chapter.blocks:
+        if block.type == "heading" and hasattr(block, 'text') and block.text.strip():
+            heading_text = block.text.strip()
+            
+            # Remove old numbering
+            import re
+            clean_title = re.sub(r'^\d+(\.\d+)*\.?\s*', '', heading_text).strip()
+            
+            # Return with new numbering
+            return f"{chapter_num} {clean_title}"
+    
+    return ""
