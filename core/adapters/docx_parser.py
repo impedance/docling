@@ -316,10 +316,14 @@ def parse_docx_to_internal_doc(docx_path: str) -> Tuple[InternalDoc, List[Resour
                     numbered_heading = next(heading_iter)
                     # Use the numbered text with proper formatting and correct level
                     numbered_text = f"{numbered_heading.number} {numbered_heading.text}"
-                    blocks.append(Heading(level=numbered_heading.level + 1, text=numbered_text))
+                    # Cap heading level at 6 to comply with Heading model validation
+                    level = min(numbered_heading.level + 1, 6)
+                    blocks.append(Heading(level=level, text=numbered_text))
                 except StopIteration:
                     # Fallback if we run out of numbered headings
-                    blocks.append(Heading(level=lvl, text=text))
+                    # Cap heading level at 6 to comply with Heading model validation
+                    level = min(lvl, 6)
+                    blocks.append(Heading(level=level, text=text))
             else:
                 # Create paragraph with inline text
                 inlines = [InlineText(content=text)]
