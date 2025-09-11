@@ -3,17 +3,17 @@
 Test DOCX parsing with cu-admin-install.docx file.
 """
 
-from core.adapters.docling_adapter import parse_with_docling
+from core.adapters.document_parser import parse_document
 
 def test_cu_admin_docx():
     """Test cu-admin-install.docx parsing."""
-    docx_file = "docs-docx-pdfs/cu-admin-install.docx"
+    docx_file = "real-docs/cu-admin-install.docx"
     
     print(f"Testing DOCX parsing with: {docx_file}")
     print("=" * 60)
     
     try:
-        internal_doc, resources = parse_with_docling(docx_file)
+        internal_doc, resources = parse_document(docx_file)
         
         print(f"Successfully parsed document:")
         print(f"- Total blocks: {len(internal_doc.blocks)}")

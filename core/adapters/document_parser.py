@@ -13,7 +13,7 @@ def _detect_file_type(file_path: str) -> str:
         return 'unknown'
 
 
-def parse_with_docling(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
+def parse_document(file_path: str) -> Tuple[InternalDoc, List[ResourceRef]]:
     """
     Parses a document file using appropriate parser based on file type.
     Routes DOCX files to specialized XML parser for better chapter extraction.

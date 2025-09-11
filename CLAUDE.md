@@ -79,8 +79,9 @@ This file provides comprehensive guidance to Claude Code when working with Pytho
 /home/spec/work/rosa/docling/
 ├── core/
 │   ├── adapters/
-│   │   ├── docling_adapter.py        # ✅ Document parsing with docling library
-│   │   └── docx_parser.py            # ✅ Specialized DOCX parser with numbering
+│   │   ├── document_parser.py        # ✅ Main document parsing router
+│   │   ├── docx_parser.py            # ✅ Specialized XML-based DOCX parser
+│   │   └── chapter_extractor.py      # ✅ Hierarchical chapter structure extraction
 │   ├── model/
 │   │   ├── config.py                 # ✅ Configuration models
 │   │   ├── internal_doc.py           # ✅ Complete AST models
@@ -88,7 +89,8 @@ This file provides comprehensive guidance to Claude Code when working with Pytho
 │   │   └── resource_ref.py           # ✅ Binary resource handling
 │   ├── transforms/
 │   │   ├── normalize.py              # ✅ Content normalization
-│   │   └── structure_fixes.py        # ✅ Structure fixes
+│   │   ├── structure_fixes.py        # ✅ Structure fixes
+│   │   └── content_reorder.py        # ✅ Content reordering transform
 │   ├── split/
 │   │   └── chapter_splitter.py       # ✅ Chapter splitting logic
 │   ├── render/
@@ -98,8 +100,11 @@ This file provides comprehensive guidance to Claude Code when working with Pytho
 │   │   ├── file_naming.py            # ✅ Deterministic file naming
 │   │   ├── toc_builder.py            # ✅ TOC and manifest generation
 │   │   └── writer.py                 # ✅ File writing operations
-│   ├── numbering/
+│   ├── numbering/                    # ✅ Complete numbering subsystem
 │   │   ├── auto_numberer.py          # ✅ Automatic heading numbering
+│   │   ├── heading_numbering.py      # ✅ Complex XML numbering extraction
+│   │   ├── md_numbering.py           # ✅ Markdown numbering utilities
+│   │   ├── validators.py             # ✅ Numbering validation
 │   │   └── __init__.py               # ✅ Package init
 │   └── pipeline.py                   # ✅ Pipeline orchestrator
 ├── tests/
@@ -108,12 +113,48 @@ This file provides comprehensive guidance to Claude Code when working with Pytho
 │   ├── test_model.py                 # ✅ Model tests
 │   ├── test_render.py                # ✅ Rendering tests
 │   ├── test_splitter.py              # ✅ Chapter splitting tests
-│   └── test_toc_builder.py           # ✅ TOC builder tests
+│   ├── test_numbering.py             # ✅ Numbering subsystem tests
+│   ├── test_toc_builder.py           # ✅ TOC builder tests
+│   └── test_placeholder.py           # ✅ Placeholder tests
 ├── samples/                          # ✅ Expected output examples
+├── real-docs/                        # ✅ Real document samples for testing
+├── output/                           # ✅ Generated output directory
 ├── doc2chapmd.py                     # ✅ CLI entry point
 ├── config.yaml                       # ✅ Default configuration
-└── requirements.txt                  # ✅ Dependencies defined
+├── requirements.txt                  # ✅ Dependencies defined
+├── project_analysis.md               # ✅ Project analysis documentation
+└── [debug/test files]                # ✅ Various debugging utilities
 ```
+
+### 🔍 Project Architecture & Implementation Details
+
+#### **Document Parsing System:**
+- **No actual docling library usage** - "docling" is only the project name
+- **Custom XML-based DOCX parsing** via `core/adapters/docx_parser.py`
+- **Document parsing router** via `core/adapters/document_parser.py`
+- **WordprocessingML XML parsing** - direct extraction from DOCX ZIP archives
+- **Specialized numbering extraction** from `word/numbering.xml` and `word/styles.xml`
+
+#### **Numbering System Architecture:**
+- **Complex numbering subsystem** in `core/numbering/` (not just auto-numbering)
+- **`heading_numbering.py`** - extracts existing numbering from Word documents
+- **Multiple format support** - decimal, roman numerals, letters
+- **Hierarchical numbering** - supports 1, 1.1, 1.1.1, etc.
+- **Multi-language support** - Russian, English, German, French, Spanish
+
+#### **Chapter Structure Processing:**
+- **`chapter_extractor.py`** - builds hierarchical document structure
+- **XML-based heading detection** via `w:outlineLvl` and paragraph styles
+- **Pattern-based style matching** for different languages
+- **Content reordering** via `content_reorder.py` for misplaced sections
+
+#### **Key Processing Flow:**
+1. **DOCX XML Extraction** → Parse ZIP archive, extract XML files
+2. **Numbering Analysis** → Parse Word's numbering system from XML
+3. **Content Structure** → Build hierarchical heading structure
+4. **Transform Pipeline** → Normalize, fix structure, reorder content
+5. **Chapter Splitting** → Split by heading levels into separate documents
+6. **Markdown Rendering** → Convert AST to clean Markdown
 
 ### 📚 Documentation & Explainability
 - **Update `README.md`** when new features are added, dependencies change, or setup steps are modified.
@@ -129,6 +170,24 @@ This file provides comprehensive guidance to Claude Code when working with Pytho
 - **Never hallucinate libraries or functions** – only use known, verified Python packages from `requirements.txt`.
 - **Always confirm file paths and module names** exist before referencing them in code or tests.
 - **Never delete or overwrite existing code** unless explicitly instructed to or as part of a planned refactoring.
+- **IMPORTANT: docling library is NOT actually used** - only listed in requirements but not installed or imported. Use custom XML parsing instead.
+
+### 📦 Verified Dependencies (from requirements.txt)
+- **`typer`** - CLI framework ✅ actively used
+- **`pydantic`** - Data validation ✅ actively used for models
+- **`pyyaml`** - YAML configuration ✅ actively used
+- **`pytest`** - Testing framework ✅ actively used
+- **`lxml`** - XML processing ✅ potential use for XML parsing
+- **`beautifulsoup4`** - HTML/XML parsing ✅ potential use
+- **`python-slugify`** - URL slug generation ✅ actively used for file naming
+- **`rich`** - Terminal formatting ✅ potential use for CLI output
+- **`docling`** - ❌ **NOT INSTALLED/USED** - project name only
+
+### 🔧 Custom XML Processing Stack
+- **`xml.etree.ElementTree`** - Core XML parsing (built-in Python)
+- **`zipfile`** - DOCX archive handling (built-in Python)
+- **`re`** - Regular expressions for pattern matching (built-in Python)
+- **Custom parsers** - All DOCX processing is done via custom XML parsers
 
 ### 🔄 Git Workflow
 - **Branch Strategy**:

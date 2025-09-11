@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import List, NamedTuple
 
-from core.adapters.docling_adapter import parse_with_docling
+from core.adapters.document_parser import parse_document
 from core.model.metadata import Metadata
 from core.model.config import PipelineConfig
 from core.output.writer import Writer
@@ -55,7 +55,7 @@ class DocumentPipeline:
             self.writer.ensure_dir(chapters_dir)
             
             # 1. Parse with docling adapter
-            doc, resources = parse_with_docling(input_path)
+            doc, resources = parse_document(input_path)
 
             # 2. Apply transforms
             doc = normalize(doc)

@@ -5,7 +5,7 @@ Create chapter files using our integrated pipeline for cu-admin-install.docx
 
 import os
 from pathlib import Path
-from core.adapters.docling_adapter import parse_with_docling
+from core.adapters.document_parser import parse_document
 from core.numbering.auto_numberer import add_automatic_numbering
 
 def create_chapters_from_docx(docx_file: str, output_dir: str):
@@ -20,7 +20,7 @@ def create_chapters_from_docx(docx_file: str, output_dir: str):
     print("=" * 60)
     
     try:
-        internal_doc, resources = parse_with_docling(docx_file)
+        internal_doc, resources = parse_document(docx_file)
         
         # Add automatic hierarchical numbering to all headings
         numbered_doc = add_automatic_numbering(internal_doc)
